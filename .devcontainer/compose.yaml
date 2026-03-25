@@ -1,0 +1,30 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - ..:/var/www/html:cached
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: industria_atunera
+      DB_USER: app
+      DB_PASS: app123
+
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: industria_atunera
+      MYSQL_USER: app
+      MYSQL_PASSWORD: app123
+      MYSQL_ROOT_PASSWORD: root123
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ../industria_atunera.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+
+volumes:
+  mysql-data:
