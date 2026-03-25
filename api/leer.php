@@ -1,36 +1,67 @@
 <?php
+
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 
-require_once '../config/database.php';
+require_once __DIR__ . '/../config/database.php';
 
 try {
     $db = (new Database())->getConnection();
-    
-    $stmt_prov = $db->query("SELECT id, nombre FROM proveedores");
-    $providers_data = $stmt_prov->fetchAll(PDO::FETCH_ASSOC);
-    
-   
-    $stmt_esp = $db->query("SELECT id, nombre FROM especies");
-    $species_data = $stmt_esp->fetchAll(PDO::FETCH_ASSOC);
 
-  
-    $stmt_hist = $db->query("SELECT p.lote, p.partida, e.nombre as especie_nombre, 
-                             t.rango as talla_rango, pr.nombre as proveedor_nombre, 
-                             p.peso_neto, p.rendimiento_esperado, p.kg_utilizables, 
-                             p.alerta_status, p.fecha_registro 
-                             FROM predicciones p
-                             JOIN especies e ON p.especie_id = e.id
-                             JOIN tallas t ON p.talla_id = t.id
-                             JOIN proveedores pr ON p.proveedor_id = pr.id
-                             ORDER BY p.fecha_registro DESC LIMIT 20");
-    $history_data = $stmt_hist->fetchAll(PDO::FETCH_ASSOC);
+    if (!$db) {
+        throw new PDOException("No se pudo establecer conexión con la base de datos.");
+    }
+
+    $stmtProv = $db->query("SELECT id, nombre FROM proveedores ORDER BY nombre");
+    $providers = $stmtProv->fetchAll(PDO::FETCH_ASSOC);
+
+    $stmtEsp = $db->query("SELECT id, nombre FROM especies ORDER BY id");
+    $species = $stmtEsp->fetchAll(PDO::FETCH_ASSOC);
+
+    $historySql = "
+        SELECT
+            p.id,
+            p.fecha_registro,
+            p.lote,
+            p.compra,
+            p.partida,
+            p.peso_neto,
+            p.temperatura,
+            p.rendimiento_esperado,
+            p.kg_utilizables,
+            p.alerta_status,
+            p.total_pt,
+            p.total_lomo,
+            p.total_miga,
+            p.proceso,
+            e.nombre AS especie_nombre,
+            t.rango AS talla_rango,
+            pr.nombre AS proveedor_nombre
+        FROM predicciones p
+        LEFT JOIN especies e ON p.especie_id = e.id
+        LEFT JOIN tallas t ON p.talla_id = t.id
+        LEFT JOIN proveedores pr ON p.proveedor_id = pr.id
+        ORDER BY p.fecha_registro DESC
+        LIMIT 200
+    ";
+
+    $stmtHist = $db->query($historySql);
+    $history = $stmtHist->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode([
         "status" => "success",
-        "data" => ["providers" => $providers_data, "species" => $species_data, "history" => $history_data]
-    ]);
-} catch(PDOException $e) {
-    echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+        "data" => [
+            "providers" => $providers,
+            "species" => $species,
+            "history" => $history
+        ]
+    ], JSON_UNESCAPED_UNICODE);
+
+} catch (Throwable $e) {
+    http_response_code(500);
+
+    echo json_encode([
+        "status" => "error",
+        "message" => $e->getMessage()
+    ], JSON_UNESCAPED_UNICODE);
 }
-?>
