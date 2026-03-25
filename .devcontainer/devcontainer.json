@@ -1,0 +1,15 @@
+{
+  "name": "atunera-codespace",
+  "dockerComposeFile": "compose.yaml",
+  "service": "app",
+  "workspaceFolder": "/var/www/html",
+  "forwardPorts": [80],
+  "portsAttributes": {
+    "80": {
+      "label": "Atunera",
+      "onAutoForward": "openPreview"
+    }
+  },
+  "postCreateCommand": "php -v && php -m",
+  "shutdownAction": "stopCompose"
+}
